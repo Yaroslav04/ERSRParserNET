@@ -17,7 +17,7 @@ namespace ERSRParserNET
         public string Case { get; set; }
         public string Court { get; set; }
         public string Judge { get; set; }
-        public List<string> CriminalCase { get; set; }
+        public string URL { get; set; }
 
         public ERSRClass()
         {
@@ -29,7 +29,7 @@ namespace ERSRParserNET
             Case = "";
             Court = "";
             Judge = "";
-            CriminalCase = new List<string>();
+            URL = "";
         }
 
         public bool Equals(ERSRClass ersr)

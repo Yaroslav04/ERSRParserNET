@@ -5,67 +5,124 @@ using System.Text.RegularExpressions;
 
 namespace ERSRParserNET
 {
-    public class Parse
+    public class ParseERSRPage
     {
         private int pages;
         private int sort; //2 по убыванию // 0 ревалантность
-        public Parse()
+        private List<HeaderClass> inputHeaders;
+        private List<string> inputCourts;
+        private string url = "https://reyestr.court.gov.ua/";
+        public ParseERSRPage()
         {
+            inputCourts = new List<string>();
+            inputHeaders = new List<HeaderClass>();
             pages = 1000;
             sort = 2;
         }
-        public Parse(int _page, int _sort)
+        public ParseERSRPage(int _page, int _sort)
         {
+            inputCourts = new List<string>();
+            inputHeaders = new List<HeaderClass>();
             pages = _page;
             sort = _sort;
         }
 
-     
-        private string url = "https://reyestr.court.gov.ua/";
+        public void AddHeader(string _header, string _value)
+        {
+            inputHeaders.Add(new HeaderClass
+            {
+                Header = _header,
+                Content = _value
+            });
+        }
 
-        private List<Dictionary<string, string>> CreateHeaders(List<InputClass> _inputList)
+        public void AddSearchHeader(string _value)
+        {
+            inputHeaders.Add(new HeaderClass
+            {
+                Header = "SearchExpression",
+                Content = _value
+            });
+        }
+
+        public void AddCaseHeader(string _value)
+        {
+            inputHeaders.Add(new HeaderClass
+            {
+                Header = "CaseNumber",
+                Content = _value
+            });
+        }
+
+        public void AddCourt(string _court)
+        {
+            inputCourts.Add(_court);
+        }
+
+        public void SetLocalCourts()
+        {
+            inputCourts = new List<string> { "305", "309", "315" };
+        }
+
+        public void SetLocalFullCourts()
+        {
+            inputCourts = new List<string> { "305", "309", "315", "1054" };
+        }
+
+        private List<Dictionary<string, string>> GetHeaders()
         {
             List<Dictionary<string, string>> result = new List<Dictionary<string, string>>();
 
-            foreach (var _input in _inputList)
+            if (inputCourts.Count > 0)
             {
-                foreach (var court in _input.Courts)
+                
+                foreach (var court in inputCourts)
                 {
-
                     Dictionary<string, string> headers = new Dictionary<string, string>();
                     headers.Add("PagingInfo.ItemsPerPage", pages.ToString());
                     headers.Add("Sort", sort.ToString());
-                    headers.Add("CourtName", court);
                     headers.Add("CSType", "2");
-                    //headers.Add( "CaseCat1", "40438"); //справи з 2019 року
-
-                    if (_input.Input.Count > 0)
+                    headers.Add("CourtName", court);
+                    if (inputHeaders.Count > 0)
                     {
-                        foreach (var item in _input.Input)
+                        foreach (var input in inputHeaders)
                         {
-                            headers.Add(item.Key, item.Value);
+                            headers.Add(input.Header, input.Content);
                         }
                     }
                     result.Add(headers);
                 }
             }
+            else
+            {
+                Dictionary<string, string> headers = new Dictionary<string, string>();
+                headers.Add("PagingInfo.ItemsPerPage", pages.ToString());
+                headers.Add("Sort", sort.ToString());
+                headers.Add("CSType", "2");
+                if (inputHeaders.Count > 0)
+                {
+                    foreach (var input in inputHeaders)
+                    {
+                        headers.Add(input.Header, input.Content);
+                    }
+                }
+                result.Add(headers);
+            }
 
             return result;
         }
 
-        public async Task<List<ERSRClass>> GetERSRListByTegs(List<InputClass> _inputList)
+        public async Task<List<ERSRClass>> GetERSRPageList()
         {
-            List<Dictionary<string, string>> _headers = CreateHeaders(_inputList);
             List<ERSRClass> result = new List<ERSRClass>();
-
-            foreach (var headers in _headers)
+            foreach(var header in GetHeaders())
             {
-                var subresult = await GetERSRFromHTML(await GetHTML(headers));
+                var subresult = GetERSRFromHTML(await GetHTML(header));
                 if (subresult.Count > 0)
                 {
                     result.AddRange(subresult);
                 }
-            }
+            }   
 
             result = result.Distinct().ToList();
             return result;
@@ -74,8 +131,6 @@ namespace ERSRParserNET
         async Task<string> GetHTML(Dictionary<string, string> _headers)
         {
             HttpClient client = new HttpClient();
-
-            List<ERSRClass> _list = new List<ERSRClass>();
 
             var content = new FormUrlEncodedContent(_headers);
 
@@ -86,7 +141,7 @@ namespace ERSRParserNET
             return responseString;
         }
 
-        private async Task<List<ERSRClass>> GetERSRFromHTML(string _html)
+        private List<ERSRClass> GetERSRFromHTML(string _html)
         {
             var lines = _html.Split('\n');
 
@@ -125,6 +180,7 @@ namespace ERSRParserNET
                             if (matches.Count > 0)
                             {
                                 decision.Id = matches[0].Value.Replace("/Review/", "").Replace("\t", "").Replace("\n", "").Replace("\r", "");
+                                decision.URL = $"https://reyestr.court.gov.ua/Review/{matches[0].Value.Replace("/Review/", "").Replace("\t", "").Replace("\n", "").Replace("\r", "")}";
                             }
 
                             regex = new Regex(@"(>)\w+");
@@ -180,11 +236,6 @@ namespace ERSRParserNET
 
                             if (decision.Id != "")
                             {
-                                var criminalCases = await GetCriminalNumberFromCasePage(decision.Id);
-                                if (criminalCases.Count > 0)
-                                {
-                                    decision.CriminalCase = criminalCases;
-                                }
                                 list.Add(decision);
                             }
                         }
@@ -223,23 +274,21 @@ namespace ERSRParserNET
         }
     }
 
-    public class InputClass
+    public class HeaderClass
     {
-        public Dictionary<string, string> Input;
-        public List<string> Courts { get; set; }
-
-        public InputClass()
+        public string Header { get; set; }
+        public string Content { get; set; }
+        public HeaderClass()
         {
-            Input = new Dictionary<string, string>();
-            Courts = new List<string>
-            {
-                "305", "309", "315"
-            };
+            Header = "";
+            Content = "";
         }
 
-        // "305", "309", "315"
-        // "1054"
-
+        public HeaderClass(string _header, string _content)
+        {
+            Header = _header;
+            Content = _content;
+        }
     }
 
 }
