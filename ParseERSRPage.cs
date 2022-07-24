@@ -8,7 +8,7 @@ namespace ERSRParserNET
     public class ParseERSRPage
     {
         private int pages;
-        private int sort; //2 по убыванию // 0 ревалантность
+        private int sort; //1 по убыванию // 0 ревалантность
         private List<HeaderClass> inputHeaders;
         private List<string> inputCourts;
         private string url = "https://reyestr.court.gov.ua/";
@@ -17,7 +17,7 @@ namespace ERSRParserNET
             inputCourts = new List<string>();
             inputHeaders = new List<HeaderClass>();
             pages = 1000;
-            sort = 2;
+            sort = 1;
         }
         public ParseERSRPage(int _page, int _sort)
         {
@@ -251,26 +251,6 @@ namespace ERSRParserNET
             }
 
             return list;
-        }
-
-        private async Task<List<string>> GetCriminalNumberFromCasePage(string _id)
-        {
-            List<string> result = new List<string>();
-            string url = $"https://reyestr.court.gov.ua/Review/{_id}";
-            HttpClient client = new HttpClient();
-            var response = await client.GetAsync(url);
-            var responseString = await response.Content.ReadAsStringAsync();
-
-            Regex regex = new Regex(@"\d(20)\d\d\d\d\d\d\d\d\d\d\d\d\d\d");
-            MatchCollection matches = regex.Matches(responseString);
-            if (matches.Count > 0)
-            {
-                foreach (Match match in matches)
-                {
-                    result.Add(match.Value);
-                }
-            }
-            return result;
         }
     }
 

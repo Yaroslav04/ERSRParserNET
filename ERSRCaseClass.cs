@@ -10,6 +10,9 @@ namespace ERSRParserNET
     {
         public string Content {get; set; }
         public string CriminalNumber{ get; set; }
+        public DateTime LegalDate { get; set; }
+
+        public List<string> Category { get; set; }
 
         public ERSRCaseClass(ERSRClass _ersr)
         {
@@ -25,6 +28,8 @@ namespace ERSRParserNET
 
             Content = "";
             CriminalNumber = "";
+            LegalDate = DateTime.MinValue;
+            Category = new List<string>();
         }
     }
 }
