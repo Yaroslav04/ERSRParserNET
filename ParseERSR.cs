@@ -5,26 +5,47 @@ using System.Text.RegularExpressions;
 
 namespace ERSRParserNET
 {
-    public class ParseERSRPage
+    public class ParseERSR
     {
         private int pages;
         private int sort; //1 по убыванию // 0 ревалантность
         private List<HeaderClass> inputHeaders;
         private List<string> inputCourts;
         private string url = "https://reyestr.court.gov.ua/";
-        public ParseERSRPage()
+        public ParseERSR()
         {
             inputCourts = new List<string>();
             inputHeaders = new List<HeaderClass>();
             pages = 1000;
             sort = 1;
         }
-        public ParseERSRPage(int _page, int _sort)
+        public ParseERSR(int _page, int _sort)
         {
             inputCourts = new List<string>();
             inputHeaders = new List<HeaderClass>();
             pages = _page;
             sort = _sort;
+        }
+
+        public async Task<List<ERSRClass>> GetERSRPageList()
+        {
+            List<ERSRClass> result = new List<ERSRClass>();
+            foreach (var header in GetHeaders())
+            {
+                var subresult = GetERSRFromHTML(await Servises.PostResponseHTML(url, header));
+                if (subresult.Count > 0)
+                {
+                    result.AddRange(subresult);
+                }
+            }
+
+            result = result.Distinct().ToList();
+            return result;
+        }
+
+        public async Task<List<ERSRCaseClass>> GetERSRCaseList()
+        {
+            return await ParseERSRCase.GetERSRCaseList(await GetERSRPageList());
         }
 
         public void AddHeader(string _header, string _value)
@@ -110,35 +131,6 @@ namespace ERSRParserNET
             }
 
             return result;
-        }
-
-        public async Task<List<ERSRClass>> GetERSRPageList()
-        {
-            List<ERSRClass> result = new List<ERSRClass>();
-            foreach(var header in GetHeaders())
-            {
-                var subresult = GetERSRFromHTML(await GetHTML(header));
-                if (subresult.Count > 0)
-                {
-                    result.AddRange(subresult);
-                }
-            }   
-
-            result = result.Distinct().ToList();
-            return result;
-        }
-
-        async Task<string> GetHTML(Dictionary<string, string> _headers)
-        {
-            HttpClient client = new HttpClient();
-
-            var content = new FormUrlEncodedContent(_headers);
-
-            var response = await client.PostAsync(url, content);
-
-            var responseString = await response.Content.ReadAsStringAsync();
-
-            return responseString;
         }
 
         private List<ERSRClass> GetERSRFromHTML(string _html)

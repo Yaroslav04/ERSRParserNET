@@ -7,18 +7,21 @@ using System.Threading.Tasks;
 
 namespace ERSRParserNET
 {
-    public class ParseERSRCase
+    public static class ParseERSRCase
     {
-        private ERSRClass ersr;
-        public ParseERSRCase(ERSRClass _ersr)
+        public static async Task<List<ERSRCaseClass>> GetERSRCaseList(List<ERSRClass> _list)
         {
-            ersr = _ersr;
+            List<ERSRCaseClass> result = new List<ERSRCaseClass>();
+            foreach (var item in _list)
+            {
+                result.Add(await GetERSRCase(item));
+            }
+            return result;
         }
-
-        public async Task<ERSRCaseClass> GetERSRCase()
+        private static async Task<ERSRCaseClass> GetERSRCase(ERSRClass _ersr)
         {
-            ERSRCaseClass result = new ERSRCaseClass(ersr);
-            string text = await GetHTML();
+            ERSRCaseClass result = new ERSRCaseClass(_ersr);
+            string text = await Servises.GetResponseHTML(_ersr.URL);
             var lines = text.Split('\n');
             foreach (var line in lines)
             {
@@ -130,14 +133,5 @@ namespace ERSRParserNET
 
             return result;
         }
-
-        private async Task<string> GetHTML()
-        {
-                HttpClient client = new HttpClient();
-                var response = await client.GetAsync(ersr.URL);
-                var responseString = await response.Content.ReadAsStringAsync();
-                return responseString;          
-        }
-
     }
 }
